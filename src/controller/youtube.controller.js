@@ -1,6 +1,7 @@
 import axios from "axios"
 import querystring from "querystring"
 import jwt from "jsonwebtoken"
+import { User } from "../models/userlog.model.js"
 const queryParams = querystring.stringify({
   response_type: 'code',
   client_id: process.env.client_Id,
@@ -31,6 +32,23 @@ export const callback = async (req, res) => {
         expiresIn: process.env.expiry
       }
     )
+    const response = await axios.get('https://www.googleapis.com/youtube/v3/channels',
+      {
+        headers: {
+          Authorization: `Bearer ${tokenResponse?.data?.access_token}`
+        },
+        params: {
+          part: 'snippet',
+          mine: true
+        }
+      }
+    )
+    const user = await User.create({
+        customeUrl: response.data?.items[0]?.snippet?.customUrl,
+         channelId: response.data.items[0].id,
+         action: "login"
+
+    })
     const options = {
       httpOnly: true,
       secure: true
@@ -38,10 +56,10 @@ export const callback = async (req, res) => {
     return res
       .cookie('token', token, options)
       .status(200)
-      .json({ message: "Successfully login with google" })
+      .json({ message: user})
   } catch (error) {
-    const code = error?.tokenResponse?.data?.error?.code;
-    const message = error?.tokenResponse?.data?.error?.message
+     const code = error?.tokenResponse?.data?.error?.code || error?.response?.data?.error?.code || 500
+     const message = error?.tokenResponse?.data?.error?.message || error?.response?.data?.error?.message || "Internal server error"
     return res.status(code).json({ message })
   }
 }
@@ -112,51 +130,51 @@ export const postComment = async (req, res) => {
   }
 }
 
-export const changeTitle = async(req,res)=>{
+export const changeTitle = async (req, res) => {
   const token = req.user.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
   const { title, description } = req.body
-  if(!title || !description){
-    return res.status(400).json({message: "title and description is required"})
+  if (!title || !description) {
+    return res.status(400).json({ message: "title and description is required" })
   }
 
   try {
     const response_one = await axios.get('https://www.googleapis.com/youtube/v3/videos',
-       {
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      params: {
-        part: 'snippet',
-        id: 'BuScJaRZxPg'
-       }
-    }
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet',
+          id: 'BuScJaRZxPg'
+        }
+      }
     )
     const categoryId = response_one?.data?.items[0]?.snippet?.categoryId
-    if(!categoryId){
-      return res.status(500).json({ message: "Failed to fetch category ID"})
+    if (!categoryId) {
+      return res.status(500).json({ message: "Failed to fetch category ID" })
     }
     const response_two = await axios.put('https://www.googleapis.com/youtube/v3/videos',
       {
         id: "BuScJaRZxPg",
-        snippet:{
+        snippet: {
           title: title,
           description: description,
           categoryId: categoryId
         }
-      }, 
-      {
-      headers: {
-        Authorization: `Bearer ${token}`
       },
-      params: {
-        part: 'snippet'
-       }
-    }
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet'
+        }
+      }
     )
-    return res.status(200).json({message: response_two?.data?.snippet})
+    return res.status(200).json({ message: response_two?.data?.snippet })
   } catch (error) {
     console.log(error)
     const status = error?.response?.data?.error.code || 500
@@ -165,7 +183,7 @@ export const changeTitle = async(req,res)=>{
   }
 }
 
-export const getComment=async(req,res)=>{
+export const getComment = async (req, res) => {
   const token = req.user.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
@@ -177,22 +195,22 @@ export const getComment=async(req,res)=>{
           Authorization: `Bearer ${token}`
         },
         params: {
-           part: 'snippet',
-           videoId: 'BuScJaRZxPg'
-         }
+          part: 'snippet',
+          videoId: 'BuScJaRZxPg'
+        }
       }
     )
     const comments = []
     const itemLength = response?.data?.items?.length
-    for(let i=0; i<itemLength; i++){
-       
-        comments.push({
-           text: response?.data?.items[i]?.snippet?.topLevelComment?.snippet?.textDisplay,
-           id: response?.data?.items[i]?.id
-       })
-       }
-    
-      return res.status(200).json({ comments })
+    for (let i = 0; i < itemLength; i++) {
+
+      comments.push({
+        text: response?.data?.items[i]?.snippet?.topLevelComment?.snippet?.textDisplay,
+        id: response?.data?.items[i]?.id
+      })
+    }
+
+    return res.status(200).json({ comments })
   } catch (error) {
     console.log(error)
     const status = error?.response?.data?.error.code || 500
@@ -201,72 +219,72 @@ export const getComment=async(req,res)=>{
   }
 }
 
-export const deleteComment=async(req,res)=>{
+export const deleteComment = async (req, res) => {
   const token = req.user.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
-   const {id}=req.params
-   if(!id){
-    return res.status(400).json({message: "comment id is required"})
-   }
-   try {
+  const { id } = req.params
+  if (!id) {
+    return res.status(400).json({ message: "comment id is required" })
+  }
+  try {
     const response = await axios.delete('https://www.googleapis.com/youtube/v3/comments',
-     {
-         headers: {
-           Authorization: `Bearer ${token}`
-         },
-         params: {
-            id: id
-          }
-       }
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          id: id
+        }
+      }
     )
-    return res.status(200).json({message: "comment successfully deleted"})
-   } catch (error) {
-      console.log(error)
-      const status = error?.response?.data?.error.code || 500
-      const message = error?.response?.data?.error.message || "Internal server error"
-      return res.status(status).json({ message })
-   }
+    return res.status(200).json({ message: "comment successfully deleted" })
+  } catch (error) {
+    console.log(error)
+    const status = error?.response?.data?.error.code || 500
+    const message = error?.response?.data?.error.message || "Internal server error"
+    return res.status(status).json({ message })
+  }
 }
 
-export const replyToComment=async(req,res)=>{
-  const {id}=req.params
+export const replyToComment = async (req, res) => {
+  const { id } = req.params
   const token = req.user.access_token
   const { reply } = req.body
-  if(!reply){
+  if (!reply) {
     return res.status(400).json({ message: "Comment reply is not attached" })
   }
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
-  if(!id){
-    return res.status(400).json({message: "Parent comment id is required"})
+  if (!id) {
+    return res.status(400).json({ message: "Parent comment id is required" })
   }
   try {
     const response = await axios.post('https://www.googleapis.com/youtube/v3/comments',
       {
-        snippet:{
-           parentId: id,
-           textOriginal: reply
+        snippet: {
+          parentId: id,
+          textOriginal: reply
         },
-        
+
       },
       {
-           headers: {
-             Authorization: `Bearer ${token}`
-           },
-           params: {
-              part: 'snippet'
-            }
-         }
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet'
+        }
+      }
     )
-    return res.status(200).json({message: response.data})
+    return res.status(200).json({ message: response.data })
   } catch (error) {
-     console.log(error)
-      const status = error?.response?.data?.error.code || 500
-      const message = error?.response?.data?.error.message || "Internal server error"
-      return res.status(status).json({ message })
+    console.log(error)
+    const status = error?.response?.data?.error.code || 500
+    const message = error?.response?.data?.error.message || "Internal server error"
+    return res.status(status).json({ message })
   }
 
 } 
