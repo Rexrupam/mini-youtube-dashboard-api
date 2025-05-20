@@ -49,6 +49,7 @@ export const callback = async (req, res) => {
          action: "login"
 
     })
+    console.log(response.data)
     const options = {
       httpOnly: true,
       secure: true
