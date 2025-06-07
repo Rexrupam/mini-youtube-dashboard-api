@@ -2,6 +2,7 @@ import axios from "axios"
 import querystring from "querystring"
 import jwt from "jsonwebtoken"
 import { User } from "../models/userlog.model.js"
+
 const queryParams = querystring.stringify({
   response_type: 'code',
   client_id: process.env.client_Id,
@@ -24,6 +25,11 @@ export const callback = async (req, res) => {
       redirect_uri: process.env.redirect_uri,
       grant_type: 'authorization_code',
     });
+    if(tokenResponse?.data?.error){
+      const code = tokenResponse?.data?.error.code || 500
+      const message = tokenResponse?.data?.error.message || "Internal server error"
+      return res.status(code).json({message})
+    }
     const token = jwt.sign({
       access_token: tokenResponse?.data?.access_token
     },
@@ -39,17 +45,22 @@ export const callback = async (req, res) => {
         },
         params: {
           part: 'snippet',
-          mine: true
+          mine: true,
+          fields: 'items(id,snippet/customUrl)'
         }
       }
     )
+    if(response?.data?.error){
+      const status = response?.data?.error.code || 500
+      const message = response?.data?.error.message || "Internal server error"
+      return res.status(status).json({ message })
+    }
     const user = await User.create({
-        customeUrl: response.data?.items[0]?.snippet?.customUrl,
-         channelId: response.data.items[0].id,
+        customeUrl: response?.data?.items[0]?.snippet?.customUrl,
+         channelId: response?.data.items[0].id,
          action: "login"
 
     })
-    console.log(response.data)
     const options = {
       httpOnly: true,
       secure: true
@@ -57,16 +68,15 @@ export const callback = async (req, res) => {
     return res
       .cookie('token', token, options)
       .status(200)
-      .json({ message: user})
+      .json({ user})
   } catch (error) {
-     const code = error?.tokenResponse?.data?.error?.code || error?.response?.data?.error?.code || 500
-     const message = error?.tokenResponse?.data?.error?.message || error?.response?.data?.error?.message || "Internal server error"
-    return res.status(code).json({ message })
+    console.log(error)
+    return res.status(500).send('Internal server error')
   }
 }
 
 export const getVideos = async (req, res) => {
-  const token = req.user.access_token
+  const token = req.user?.access_token
 
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
@@ -79,30 +89,54 @@ export const getVideos = async (req, res) => {
         },
         params: {
           part: 'snippet',
-          id: 'BuScJaRZxPg'  //BuScJaRZxPg
+          id: 'BuScJaRZxPg',   //BuScJaRZxPg
+          fields: 'items/snippet(title,description)'
         }
       })
-    const title = response?.data?.items[0].snippet.title;
-    const description = response?.data?.items[0].snippet.description
+    if(response?.data?.error){
+      const status = response?.data?.error.code || 500
+      const message = response?.data?.error.message || "Internal server error"
+      return res.status(status).json({ message })
+    }
+    const title = response?.data?.items[0]?.snippet?.title;
+    const description = response?.data?.items[0]?.snippet?.description
     return res.status(200).json({ title, description })
   } catch (error) {
-    const status = error.response.data.error.code || 500
-    const message = error.response.data.error.message || "Internal server error"
+    const status = error?.response?.data?.error?.code || 500
+    const message = error?.response?.data?.error?.message || "Internal server error"
     return res.status(status).json({ message })
   }
 }
 
 export const postComment = async (req, res) => {
-  const token = req.user.access_token
+  const token = req.user?.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
   const { comment } = req.body
   if (!comment) {
-    return res.status(400).json({ message: "Comment is required" })
+    return res.status(400).json({ message: "Comment field is required" })
   }
-  try {
-    const response = await axios.post('https://www.googleapis.com/youtube/v3/commentThreads',
+  
+    try {
+      const response1 = await axios.get('https://www.googleapis.com/youtube/v3/channels',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet',
+          mine: true,
+          fields: 'items(id,snippet/customUrl)'
+        }
+      }
+    )
+    if(response1?.data?.error){
+      const status = response1?.data?.error.code || 500
+      const message = response1?.data?.error.message || "Internal server error"
+      return res.status(status).json({ message })
+    }
+    const response2 = await axios.post('https://www.googleapis.com/youtube/v3/commentThreads',
       {
         snippet: {
           videoId: "BuScJaRZxPg",
@@ -119,20 +153,34 @@ export const postComment = async (req, res) => {
           'Content-Type': 'application/json'
         },
         params: {
-          part: "snippet"
+          part: "snippet",
+          fields: 'snippet/topLevelComment/snippet/textDisplay'
+          
         }
       }
     )
-    return res.status(200).json({ message: response.data })
+    if(response2.data?.error){
+      const code = response2?.data?.error?.code || 500
+      const message = response2?.data?.error?.message || "Internal server error"
+      return res.status(code).json({ message })
+    }
+    const user = await User.create({
+        customeUrl: response1?.data?.items[0]?.snippet?.customUrl,
+         channelId: response1?.data.items[0].id,
+         action: `comment posted - ${response2.data.snippet.topLevelComment.snippet.textDisplay}` 
+    })
+    if(!user){
+      return res.status(500).json({message: "failed to create database log"})
+    }
+    return res.status(200).json({ user })
   } catch (error) {
-    const status = error?.response?.data?.error.code || 500
-    const message = error?.response?.data?.error.message || "Internal server error"
-    return res.status(status).json({ message })
+    console.log(error)
+    return res.status(500).send("Internal server error")
   }
 }
 
 export const changeTitle = async (req, res) => {
-  const token = req.user.access_token
+  const token = req.user?.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
@@ -142,22 +190,29 @@ export const changeTitle = async (req, res) => {
   }
 
   try {
-    const response_one = await axios.get('https://www.googleapis.com/youtube/v3/videos',
+      const response1 = await axios.get('https://www.googleapis.com/youtube/v3/videos',
       {
         headers: {
           Authorization: `Bearer ${token}`
         },
         params: {
           part: 'snippet',
-          id: 'BuScJaRZxPg'
+          id: 'BuScJaRZxPg',
+          fields: 'items/snippet/categoryId'
         }
       }
     )
-    const categoryId = response_one?.data?.items[0]?.snippet?.categoryId
+    if(response1?.data?.error){
+      console.log(response1?.data?.error)
+      const code = response1?.data?.error?.code || 500
+      const message = response1?.data?.error?.message || "Internal server error"
+      return res.status(code).json({message})
+    }
+    const categoryId = response1?.data?.items[0]?.snippet?.categoryId
     if (!categoryId) {
       return res.status(500).json({ message: "Failed to fetch category ID" })
     }
-    const response_two = await axios.put('https://www.googleapis.com/youtube/v3/videos',
+    const response2 = await axios.put('https://www.googleapis.com/youtube/v3/videos',
       {
         id: "BuScJaRZxPg",
         snippet: {
@@ -171,21 +226,54 @@ export const changeTitle = async (req, res) => {
           Authorization: `Bearer ${token}`
         },
         params: {
-          part: 'snippet'
+          part: 'snippet',
+          fields: 'snippet(title,description)'
         }
       }
     )
-    return res.status(200).json({ message: response_two?.data?.snippet })
+    if(response2?.data?.error){
+      console.log(response2?.data?.error)
+      const code = response2?.data?.error?.code || 500
+      const message = response2?.data?.error?.message || "Internal server error"
+      return res.status(code).json({message})
+    }
+    const response3 = await axios.get('https://www.googleapis.com/youtube/v3/channels',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet',
+          mine: true,
+          fields: 'items(id,snippet/customUrl)'
+        }
+      }
+    )
+    if(response3?.data?.error){
+      console.log(response3?.data?.error)
+      const code = response3?.data?.error?.code || 500
+      const message = response3?.data?.error?.message || "Internal server error"
+      return res.status(code).json({message})
+    }
+     const user = await User.create({
+       customeUrl: response3?.data?.items[0]?.snippet?.customUrl,
+       channelId: response3?.data?.items[0].id,
+       action: `Title and description changed - title - ${response2?.data?.snippet?.title}, desc - ${response2?.data?.snippet?.description}`
+     })
+
+     if(!user){
+      return res.status(500).json({ message: "Failed to create database log" })
+     }
+
+    return res.status(200).json({ user })
   } catch (error) {
     console.log(error)
-    const status = error?.response?.data?.error.code || 500
-    const message = error?.response?.data?.error.message || "Internal server error"
-    return res.status(status).json({ message })
+    return res.status(500).send("Internal server error")
   }
 }
 
 export const getComment = async (req, res) => {
-  const token = req.user.access_token
+  const token = req.user?.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
@@ -197,31 +285,36 @@ export const getComment = async (req, res) => {
         },
         params: {
           part: 'snippet',
-          videoId: 'BuScJaRZxPg'
+          videoId: 'BuScJaRZxPg',
+          fields: 'items(snippet/topLevelComment(id,snippet/textDisplay))'
         }
       }
     )
+    if(response?.data?.error){
+      const status = response?.data?.error?.code || 500
+      const message = response?.data?.error?.message || "Internal server error"
+      return res.status(status).json({ message })
+    }
     const comments = []
     const itemLength = response?.data?.items?.length
     for (let i = 0; i < itemLength; i++) {
-
-      comments.push({
+        comments.push({
         text: response?.data?.items[i]?.snippet?.topLevelComment?.snippet?.textDisplay,
-        id: response?.data?.items[i]?.id
+        id: response?.data?.items[i]?.snippet?.topLevelComment?.id
       })
     }
 
     return res.status(200).json({ comments })
   } catch (error) {
     console.log(error)
-    const status = error?.response?.data?.error.code || 500
-    const message = error?.response?.data?.error.message || "Internal server error"
+    const status = error?.response?.data?.error?.code || 500
+    const message = error?.response?.data?.error?.message || "Internal server error"
     return res.status(status).json({ message })
   }
 }
 
 export const deleteComment = async (req, res) => {
-  const token = req.user.access_token
+  const token = req.user?.access_token
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
@@ -240,6 +333,11 @@ export const deleteComment = async (req, res) => {
         }
       }
     )
+    if(response?.data?.error){
+      const code = response?.data?.error?.code || 500
+      const message = response?.data?.error?.message || "Internal server error"
+      return res.status(code).json({ message })
+    }
     return res.status(200).json({ message: "comment successfully deleted" })
   } catch (error) {
     console.log(error)
@@ -253,12 +351,13 @@ export const replyToComment = async (req, res) => {
   const { id } = req.params
   const token = req.user.access_token
   const { reply } = req.body
-  if (!reply) {
-    return res.status(400).json({ message: "Comment reply is not attached" })
-  }
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
   }
+  if (!reply) {
+    return res.status(400).json({ message: "Comment reply is not attached" })
+  }
+  
   if (!id) {
     return res.status(400).json({ message: "Parent comment id is required" })
   }
@@ -276,16 +375,23 @@ export const replyToComment = async (req, res) => {
           Authorization: `Bearer ${token}`
         },
         params: {
-          part: 'snippet'
+          part: 'snippet',
+          fields: "snippet/textDisplay"
         }
       }
     )
-    return res.status(200).json({ message: response.data })
+    if(response?.data?.error){
+      const code = response?.data?.error?.code || 500
+      const message = response?.data?.error?.message || "Internal server error"
+      return res.status(code).json({ message })
+    }
+    return res.status(200).json({ message: response?.data })
   } catch (error) {
     console.log(error)
-    const status = error?.response?.data?.error.code || 500
-    const message = error?.response?.data?.error.message || "Internal server error"
+    const status = error?.response?.data?.error?.code || 500
+    const message = error?.response?.data?.error?.message || "Internal server error"
     return res.status(status).json({ message })
   }
 
 } 
+
