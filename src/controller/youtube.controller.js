@@ -349,7 +349,7 @@ export const deleteComment = async (req, res) => {
 
 export const replyToComment = async (req, res) => {
   const { id } = req.params
-  const token = req.user.access_token
+  const token = req.user?.access_token
   const { reply } = req.body
   if (!token) {
     return res.status(401).json({ message: "Unauthorised access" })
