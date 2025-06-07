@@ -119,9 +119,9 @@ export const postComment = async (req, res) => {
   }
   
     try {
-      const response1 = await axios.get('https://www.googleapis.com/youtube/v3/channels',
+     const response1 = await axios.get('https://www.googleapis.com/youtube/v3/channels',
       {
-        headers: {
+         headers: {
           Authorization: `Bearer ${token}`
         },
         params: {
@@ -395,3 +395,50 @@ export const replyToComment = async (req, res) => {
 
 } 
 
+export const userNote = async (req, res) => {
+  const token = req.user?.access_token
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorised access" })
+  }
+  const { note } = req.body
+  if (!note) {
+    return res.status(400).json({ message: "Note is required" })
+  }
+
+  try {
+     const response = await axios.get('https://www.googleapis.com/youtube/v3/channels',
+      {
+         headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet',
+          mine: true,
+          fields: 'items(id,snippet/customUrl)'
+        }
+      }
+    )
+    if(response?.data?.error){
+      const status = response?.data?.error.code || 500
+      const message = response?.data?.error.message || "Internal server error"
+      return res.status(status).json({ message })
+    }
+    const user = await User.create({
+      customeUrl: response?.data?.items[0]?.snippet?.customUrl,
+      channelId: response?.data.items[0].id,
+      action: `User note - ${note}`
+    })
+
+    if(!user){
+      return res.status(500).json({ message: "Failed to create database log" })
+    }
+
+    return res.status(200).json({ user })
+
+   }catch(error){
+      console.log(error)
+      const status = error?.response?.data?.error?.code || 500
+      const message = error?.response?.data?.error?.message || "Internal server error"
+      return res.status(status).json({ message })
+    }
+}
