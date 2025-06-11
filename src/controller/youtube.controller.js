@@ -68,7 +68,7 @@ export const callback = async (req, res) => {
     return res
       .cookie('token', token, options)
       .status(200)
-      .json({ user})
+      .redirect('http://http://127.0.0.1:5500?login=success')
   } catch (error) {
     console.log(error)
     return res.status(500).send('Internal server error')
