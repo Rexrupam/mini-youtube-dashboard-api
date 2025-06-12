@@ -63,7 +63,8 @@ export const callback = async (req, res) => {
     })
     const options = {
       httpOnly: true,
-      secure: true
+      secure: true,
+      SameSite: 'None'
     }
     return res
       .cookie('token', token, options)
