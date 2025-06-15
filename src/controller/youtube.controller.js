@@ -64,12 +64,13 @@ export const callback = async (req, res) => {
     const options = {
       httpOnly: true,
       secure: true,
-      SameSite: 'None'
+      sameSite: 'None'
     }
     return res
       .cookie('token', token, options)
       .status(200)
-      .redirect('http://127.0.0.1:5500?login=success')
+      .send('hello world')
+      //.redirect('http://127.0.0.1:5500?login=success')
   } catch (error) {
     console.log(error)
     return res.status(500).send('Internal server error')
@@ -77,18 +78,11 @@ export const callback = async (req, res) => {
 }
 
 export const getVideos = async (req, res) => {
-  const token = req.user?.access_token
-
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorised access" })
-  }
   try {
     const response = await axios.get('https://www.googleapis.com/youtube/v3/videos',
       {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
         params: {
+          key: process.env.api_key,
           part: 'snippet',
           id: 'BuScJaRZxPg',   //BuScJaRZxPg
           fields: 'items/snippet(title,description)'
@@ -427,7 +421,8 @@ export const userNote = async (req, res) => {
     const user = await User.create({
       customeUrl: response?.data?.items[0]?.snippet?.customUrl,
       channelId: response?.data.items[0].id,
-      action: `User note - ${note}`
+      action: 'note added',
+      notes: note
     })
 
     if(!user){
@@ -442,4 +437,29 @@ export const userNote = async (req, res) => {
       const message = error?.response?.data?.error?.message || "Internal server error"
       return res.status(status).json({ message })
     }
+}
+export const searchNote = async (req, res) => {
+  const token = req.user?.access_token
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorised access" })
+  }
+  
+   
+  const { search } = req.body
+  if (!search) {
+    return res.status(400).json({ message: "Search term is required" })
+  }
+  
+
+  
+  const note = await User.find({notes: { $exists: true, $ne: null }})
+  if(!note){
+    return res.status(404).json({ message: "No notes found" })
+  }
+
+  const filteredNotes = note.filter((item) => {
+    return item.notes.toLowerCase().includes(search.toLowerCase())
+  })
+  return res.status(200).json({ filteredNotes  })
+  
 }
