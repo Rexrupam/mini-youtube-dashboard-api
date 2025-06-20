@@ -1,11 +1,11 @@
 import mongoose from "mongoose"
 
 const userSchema = new mongoose.Schema({
-     customeUrl:{
+    customUrl:{
         type: String,
         required: true
-     },
-     channelId:{
+    },
+    channelId:{
         type: String,
         required: true
      },
