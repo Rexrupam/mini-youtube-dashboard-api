@@ -1,1 +1,1 @@
-export const db_name = 'youtubeDashboard'
+export const db_name = 'authentication_system_db'

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 GET /login
 
@@ -117,3 +118,5 @@ GET /searchNotes
     
     Response:
         - Returns an array of user notes matching the search term.
+=======
+>>>>>>> c4571efaac944c620c180e0714589c5bd5575c8e
