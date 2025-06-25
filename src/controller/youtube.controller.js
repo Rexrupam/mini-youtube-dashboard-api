@@ -63,7 +63,7 @@ export const callback = async (req, res) => {
     return res
       .cookie('token', token, options)
       .status(200)
-      .json({user})
+      .redirect('http://127.0.0.1:5500?login=success')
   } catch (error) {
     console.log(error)
     const status = error?.response?.data?.error?.code || 500
@@ -445,4 +445,32 @@ export const searchNote = async (req, res) => {
   
   return res.status(200).json({ filteredNotes  })
   
+}
+
+export const getCustomUrl = async (req, res) => {
+  const token = req.user?.access_token
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorised access" })
+  }
+  
+  try {
+    const getCustomUrl = await axios.get('https://www.googleapis.com/youtube/v3/channels',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          part: 'snippet',
+          mine: true,
+          fields: 'items/snippet/customUrl'
+        }
+      }
+    )
+    return res.status(200).json({ customUrl: getCustomUrl?.data?.items[0]?.snippet?.customUrl })
+  } catch (error) {
+    console.log(error)
+    const status = error?.response?.data?.error?.code || 500
+    const message = error?.response?.data?.error?.message || "Internal server error"
+    return res.status(status).json({ message })
+  }
 }

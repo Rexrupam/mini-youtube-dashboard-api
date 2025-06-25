@@ -3,6 +3,7 @@ import { callback,
 changeTitle,
 deleteComment,
 getComment,
+getCustomUrl,
 getVideos,
 login,
 postComment, 
@@ -25,4 +26,5 @@ router.route('/delete-comment/:id').delete(verifyToken,deleteComment)
 router.route('/reply-to-comment/:id').post(verifyToken,replyToComment)
 router.route('/user-note').post(verifyToken,userNote)
 router.route('/searchNotes').get(verifyToken, searchNote)
+router.route('/getCustomUrl').get(verifyToken, getCustomUrl)
 export default router;
