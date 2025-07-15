@@ -10,7 +10,7 @@ postComment,
 replyToComment, 
 searchNote, 
 userNote } from "../controller/youtube.controller.js";
-import { verifyToken } from "../middlewares/verifyToken.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 
 
 

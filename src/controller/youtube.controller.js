@@ -1,7 +1,7 @@
 import axios from "axios"
 import querystring from "querystring"
 import jwt from "jsonwebtoken"
-import { User } from "../models/userlog.model.js"
+import { User } from "../model/userlog.model.js"
 
 const queryParams = querystring.stringify({
   response_type: 'code',
@@ -63,7 +63,7 @@ export const callback = async (req, res) => {
     return res
       .cookie('token', token, options)
       .status(200)
-      .redirect('http://127.0.0.1:5500?login=success')
+      .json({message: "Successfully login"})
   } catch (error) {
     console.log(error)
     const status = error?.response?.data?.error?.code || 500
