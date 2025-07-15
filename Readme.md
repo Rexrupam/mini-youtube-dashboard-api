@@ -1,3 +1,10 @@
+GET /healthCheck
+    
+    Description: Health check endpoint to verify server status.
+
+    response:
+        - Returns a simple message indicating the server is running.
+
 GET /login
 
     Description: Initiates user login (could redirect to Google login).
