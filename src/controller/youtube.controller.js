@@ -468,7 +468,7 @@ export const getCustomUrl = async (req, res) => {
     )
     return res.status(200).json({ customUrl: getCustomUrl?.data?.items[0]?.snippet?.customUrl })
   } catch (error) {
-    console.log(error)
+    
     const status = error?.response?.data?.error?.code || 500
     const message = error?.response?.data?.error?.message || "Internal server error"
     return res.status(status).json({ message })
