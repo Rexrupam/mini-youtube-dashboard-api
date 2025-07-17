@@ -388,7 +388,7 @@ export const userNote = async (req, res) => {
       customUrl: response?.data?.items[0]?.snippet?.customUrl,
       channelId: response?.data.items[0].id,
       action: 'note added',
-      notes: note
+      note: note
     })
 
     if(!user){
@@ -431,16 +431,16 @@ export const searchNote = async (req, res) => {
   
 
   const note = await User.find({
-  notes: { $exists: true, $ne: null },
+  note: { $exists: true, $ne: null },
   customUrl: getCustomUrl?.data?.items[0]?.snippet?.customUrl
-  }).select("notes -_id")
+  }).select("note -_id")
 
   if(!note){
     return res.status(404).json({ message: "No notes found" })
   }
 
    const filteredNotes = note.filter((item) => {
-     return item.notes.toLowerCase().includes(search.toLowerCase())
+     return item.note.toLowerCase().includes(search.toLowerCase())
   })
   
   return res.status(200).json({ filteredNotes  })
