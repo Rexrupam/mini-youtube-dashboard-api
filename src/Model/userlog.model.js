@@ -11,6 +11,9 @@ const UserlogSchema = new mongoose.Schema({
     },
     action:{
         type: String
+    },
+    note:{
+        type: String
     }
 }, {timestamps: true})
 
