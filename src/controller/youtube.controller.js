@@ -1,7 +1,7 @@
 import axios from "axios"
 import querystring from "querystring"
 import jwt from "jsonwebtoken"
-import { User } from "../model/userlog.model.js"
+import { User } from "../Model/userlog.model.js"
 
 const queryParams = querystring.stringify({
   response_type: 'code',
