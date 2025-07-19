@@ -1,19 +1,25 @@
-GET /healthCheck
-    
+# YouTube Video Management API
+# API Documentation
+# This API allows users to manage YouTube videos, including changing titles and descriptions, posting comments, and more.
+# Base URL: `https://mini-youtube-dashboard-api.onrender.com`
+
+# Endpoints
+## Health Check
+### GET /healthCheck
+
     Description: Health check endpoint to verify server status.
 
     response:
         - Returns a simple message indicating the server is running.
-
-GET /login
+## User Authentication
+### GET /login
 
     Description: Initiates user login (could redirect to Google login).
 
     response:
-        - Redirects to Google OAuth login page
+        - Redirects to Google OAuth login page.
 
-
-GET /google/callback
+### GET /google/callback
 
     Description: Callback endpoint for Google OAuth login.
 
@@ -22,14 +28,14 @@ GET /google/callback
         - Finally returns the action log saved in the database.
 
 
-GET /get-video-details
+### GET /get-video-details
 
     Description: Fetch details of videos.
 
     response:
         - Returns video details - title, description
 
-POST /change-title-desc
+### POST /change-title-desc
 
     Description: Change the title and description of the video.
 
@@ -40,11 +46,11 @@ POST /change-title-desc
             "title": "Video Title",
             "description": "video description"
         }
-    
-    Response:
+
+    response:
         - Returns the action log saved in the database.
 
-POST /post-comment
+### POST /post-comment
 
     Description: Post a comment on the video.
 
@@ -54,10 +60,11 @@ POST /post-comment
         {
             "comment": "Your comment here"
         }
-    
-    Response:
+
+    response:
         - Returns the action log saved in the database.
-GET /get-comments
+
+### GET /get-comments
 
     Description: Fetch comments for the video.
 
@@ -65,7 +72,7 @@ GET /get-comments
         - Returns an array of comments on the video.
         - Includes comment ID, Youtube customUrl, and comment text
 
-DELETE /delete-comment/{commentId}
+### DELETE /delete-comment/{commentId}
 
     Description: Delete a comment on the video.
 
@@ -74,12 +81,11 @@ DELETE /delete-comment/{commentId}
     parameters:
         - commentId: ID of the comment to delete
 
-    
-    Response:
+    response:
         - Returns the action log saved in the database.
 
 
-POST /reply-to-comment/{commentId}
+### POST /reply-to-comment/{commentId}
 
     Description: Reply to a comment on the video.
 
@@ -93,10 +99,24 @@ POST /reply-to-comment/{commentId}
             "reply": "Your reply here"
         }
 
-    Response:
+    response:
         - Returns the action log saved in the database.
 
-POST /user-note
+### POST /user-note
+
+    Description: Create a user note for improving the video.
+
+    Auth: ✅ Requires token
+
+    body:
+        {
+            "note": "Your note here"
+        }
+
+    response:
+        - Returns the action log saved in the database.
+
+### POST /user-note
 
     Description: Create a user note for improving the video.
 
@@ -110,7 +130,7 @@ POST /user-note
     Response:
         - Returns the action log saved in the database.
 
-GET /searchNotes
+### GET /searchNotes
 
     Description: Search for user notes.         
 
