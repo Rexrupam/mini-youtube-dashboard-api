@@ -1,7 +1,7 @@
 # YouTube Video Management API
 # API Documentation
-# This API allows users to manage YouTube videos, including changing titles and descriptions, posting comments, and more.
-# Base URL: `https://mini-youtube-dashboard-api.onrender.com`
+ This API allows users to manage YouTube videos, including changing titles and descriptions, posting comments, and more.
+# Base URL: `https://mini-youtube-dashboard-api.onrender.com/v1`
 
 # Endpoints
 ## Health Check
